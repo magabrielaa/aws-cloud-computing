@@ -7,6 +7,8 @@ In this repository, I usw AWS S3 to store user input files and annotated results
 
 All interactions with these buckets is done using `boto3` in Python.
 
+I also create a form for the user to upload a VCF file using HTML and Jinja, see the `templates` directory.
+
 ### Note: annotate/files endpoint
 
 Given that by uploading a file, we are creating a new resource, I choose to return status code **201** instead of the generic 200 success code.
