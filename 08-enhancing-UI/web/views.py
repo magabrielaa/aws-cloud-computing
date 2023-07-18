@@ -11,7 +11,7 @@ __author__ = 'Vas Vasiliadis <vas@uchicago.edu>'
 import uuid
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 import boto3
 from botocore.client import Config
@@ -45,15 +45,15 @@ def annotate():
   bucket_name = app.config['AWS_S3_INPUTS_BUCKET']
   user_id = session['primary_identity']
 
-  # Generate unique ID to be used as S3 key (name)
+  # (2) Generate unique ID to be used as S3 key (name)
   object_id = str(uuid.uuid4())
   key_name= app.config['AWS_S3_KEY_PREFIX'] + user_id + '/' + \
     object_id + '~' + '${filename}'
 
-  # Create the redirect URL
+  # (3) Create the redirect URL
   redirect_url = request.url + "/job"
 
-  # Define policy conditions
+  # (4) Define policy conditions
   encryption = app.config['AWS_S3_ENCRYPTION']
   acl = app.config['AWS_S3_ACL']
   fields = {
@@ -67,7 +67,7 @@ def annotate():
     {"acl": acl}
   ]
 
-  # (2) Generate signed POST request
+  # (5) Generate signed POST request
   # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html
   try:
     presigned_post = s3.generate_presigned_post(
@@ -80,7 +80,7 @@ def annotate():
     app.logger.error(f'Unable to generate presigned URL for upload: {e}')
     return abort(500)
 
-  # (3) Render the upload form template which will parse/submit the presigned POST
+  # (6) Render the upload form template which will parse/submit the presigned POST
   return render_template('annotate.html', s3_post=presigned_post, role=session['role'])
 
 
@@ -96,15 +96,15 @@ homework assignments
 @authenticated
 def create_annotation_job_request():
 
-  # Parse redirect URL query parameters for S3 object info
+  # (1) Parse redirect URL query parameters for S3 object info
   bucket_name = request.args.get('bucket')
   s3_key = request.args.get('key')
 
-  # Extract the job ID and input file name from the S3 key
+  # (2) Extract the job ID and input file name from the S3 key
   job_id = s3_key.split("/")[2][:36]
   input_file_name = s3_key.split("/")[2][37:] # Includes .vcf extension
  
-  # (2) Create a job item and persist it to the annotations database
+  # (3) Create a job item and persist it to the annotations database
   job_item = {"job_id": job_id, 
             "user_id": session['primary_identity'], 
             "input_file_name": input_file_name,
@@ -122,7 +122,7 @@ def create_annotation_job_request():
     app.logger.error(f'Failure to add job item to database: {e}')
     return abort(500)
 
-  # (3) Publish a notification message to SNS topic
+  # (4) Publish a notification message to SNS topic
   # Referred to "Publish to a topic", https://docs.aws.amazon.com/code-library/latest/ug/python_3_sns_code_examples.html
   # https://stackoverflow.com/questions/40667452/boto3-publish-message-sns
   try:
@@ -143,9 +143,31 @@ def create_annotation_job_request():
 @authenticated
 def annotations_list():
 
-  # Get list of annotations to display
-  
-  return render_template('annotations.html', annotations=None)
+  user_id = session['primary_identity']
+
+  # (1) Query table to get list of annotations to display
+  dynamodb = boto3.resource("dynamodb", region_name=app.config['AWS_REGION_NAME'])
+  try:
+    ann_table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+    response = ann_table.query(IndexName= 'user_id_index',
+                              KeyConditionExpression= Key('user_id').eq(user_id))
+  except ClientError as e:
+    app.logger.error(f'Unable to query list of annotations: {e}')
+    return abort(500)
+
+  # List of annotations
+  items = response['Items']
+
+  # (2) Convert submit time entries from epoch time to instance time zone (CST)
+  # https://stackoverflow.com/questions/32325209/python-how-to-convert-unixtimestamp-and-timezone-into-datetime-object
+  if items: # Only do for loop if items is not an empty list
+    for i in items:
+      epoch_time = i["submit_time"]
+      cst = timezone(-timedelta(hours=6))
+      converted_time = datetime.fromtimestamp(epoch_time, cst).strftime('%Y-%m-%d %H:%M:%S')
+      i["submit_time"] = converted_time
+
+  return render_template('annotations.html', annotations=items)
 
 
 """Display details of a specific annotation job
@@ -153,7 +175,75 @@ def annotations_list():
 @app.route('/annotations/<id>', methods=['GET'])
 @authenticated
 def annotation_details(id):
-  pass
+
+  # (1) Get details for a given job
+  dynamodb = boto3.resource("dynamodb", region_name=app.config['AWS_REGION_NAME'])
+  try:
+    ann_table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+    response = ann_table.get_item(Key={'job_id': id})
+  except ClientError as e:
+    app.logger.error(f'Unable to get job details: {e}')
+    return abort(500)
+
+  # (2) Retrieve variables
+  user_id = session['primary_identity']
+  input_bucket = app.config['AWS_S3_INPUTS_BUCKET']
+  job_item = response['Item']
+  if job_item:
+    input_key = job_item["s3_key_input_file"]
+  else:
+    app.logger.error(f'Failed to retrieve job item: {e}')
+    return abort(404)
+
+  # (3) Return 403 error if job id does not belong to authenticated user
+  if job_item["user_id"] != user_id:
+    return abort(403)
+  
+  # (4) Convert time entries from epoch time to instance time zone (CST)
+  # https://stackoverflow.com/questions/32325209/python-how-to-convert-unixtimestamp-and-timezone-into-datetime-object
+  cst = timezone(-timedelta(hours=6))
+  submit_epoch = job_item["submit_time"]
+  converted_submit = datetime.fromtimestamp(submit_epoch, cst).strftime('%Y-%m-%d %H:%M:%S')
+  job_item["submit_time"] = converted_submit
+  
+  # (5) Change completed time format only if job status is "COMPLETED"
+  if "complete_time" in job_item: 
+    complete_epoch = job_item["complete_time"]
+    converted_complete = datetime.fromtimestamp(complete_epoch, cst).strftime('%Y-%m-%d %H:%M:%S')
+    job_item["complete_time"] = converted_complete 
+
+  # (6) Generate pre-signed download URL for input file
+  # https://allwin-raju-12.medium.com/boto3-and-python-upload-download-generate-pre-signed-urls-and-delete-files-from-the-bucket-87b959f7bbaf
+  # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html
+  try:
+    s3_client = boto3.client('s3', region_name=app.config['AWS_REGION_NAME'])  
+    input_url = s3_client.generate_presigned_url(ClientMethod='get_object',
+                                          ExpiresIn=app.config['AWS_SIGNED_REQUEST_EXPIRATION'],
+                                          Params={'Bucket': input_bucket,
+                                                  'Key': input_key,
+                                                  'ResponseContentDisposition': 'attachment'})
+  except ClientError as e:
+    app.logger.error(f'Unable to generate presigned download URL for the input file: {e}')
+    return abort(500)
+
+  #(7) Generate pre-signed download URL for results file (once job is "COMPLETED")
+  if job_item["job_status"] == "COMPLETED":
+    results_bucket = app.config['AWS_S3_RESULTS_BUCKET']
+    results_key = job_item["s3_key_result_file"]
+    try:
+      s3_client = boto3.client('s3', region_name=app.config['AWS_REGION_NAME'])  
+      results_url = s3_client.generate_presigned_url(ClientMethod='get_object',
+                                                    ExpiresIn=app.config['AWS_SIGNED_REQUEST_EXPIRATION'],
+                                                    Params={'Bucket': results_bucket,
+                                                          'Key': results_key,
+                                                          'ResponseContentDisposition': 'attachment'})
+      return render_template('annotation.html', job=job_item, input_url=input_url, results_url=results_url)
+    except ClientError as e:
+      app.logger.error(f'Unable to generate presigned download URL for results file: {e}')
+      return abort(500)
+  # If job status is not complete, render html without results file url
+  else:
+    return render_template('annotation.html', job=job_item, input_url=input_url)
 
 
 """Display the log file contents for an annotation job
@@ -161,8 +251,44 @@ def annotation_details(id):
 @app.route('/annotations/<id>/log', methods=['GET'])
 @authenticated
 def annotation_log(id):
-  pass
 
+  # (1) Query table to get S3 key name
+  dynamodb = boto3.resource("dynamodb", region_name=app.config['AWS_REGION_NAME'])
+  try:
+    ann_table = dynamodb.Table(app.config["AWS_DYNAMODB_ANNOTATIONS_TABLE"])
+    response = ann_table.get_item(Key={'job_id': id})
+  except ClientError as e:
+    app.logger.error(f'Unable to get job details: {e}')
+    return abort(500)
+
+  # (2) Retrieve variables if job item exists
+  job_item = response['Item']
+  if job_item:
+    key = job_item["s3_key_log_file"]
+  else:
+    app.logger.error(f'Unable to retrieve values: {e}')
+    return abort(404)
+
+  # Save relevant variables
+  bucket = app.config['AWS_S3_RESULTS_BUCKET']
+  user_id = session['primary_identity']
+
+  # (3) Return 403 error if job id does not belong to authenticated user
+  if job_item["user_id"] != user_id:
+    return abort(403)
+
+  # (4) Read S3 log file 
+  # https://stackoverflow.com/questions/31976273/open-s3-object-as-a-string-with-boto3
+  s3 = boto3.resource('s3', region_name=app.config['AWS_REGION_NAME'])
+  try:
+    obj = s3.Object(bucket, key)
+    log_text = obj.get()['Body'].read().decode('utf-8')
+  except ClientError as e:
+      app.logger.error(f'Unable to read log file from S3 bucket: {e}')
+      return abort(500)
+
+  return render_template('view_log.html', S3_object=log_text)
+  
 
 """Subscription management handler
 """

@@ -63,10 +63,10 @@ if __name__ == '__main__':
                         with open(PATH + job_id + "/" + file, 'rb') as data:
                             client = boto3.client('s3', region_name=REGION)
                             client.put_object(
-                                            ACL=config["s3"]["acl"],
-                                            Body=data,
-                                            Bucket=config["s3"]["results_bucket"],
-                                            Key= config["s3"]["key_prefix"] + f'{user_id}/{job_id}~{file}')
+                                        ACL=config["s3"]["acl"],
+                                        Body= data,
+                                        Bucket=config["s3"]["results_bucket"],
+                                        Key= config["s3"]["key_prefix"] + f'{user_id}/{job_id}~{file}')
                     except ClientError as e:
                         print("Failure to upload annotation files to S3. ", e.response['Error']['Message'])
                     # Remove results and log files from directory

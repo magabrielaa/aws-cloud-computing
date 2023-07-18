@@ -1,4 +1,3 @@
-import boto3
 from botocore.exceptions import ClientError
 import json
 import os
@@ -51,7 +50,7 @@ def process_queue(queue_object):
     max_messages = int(config["sqs"]["max_messages"])
     try:
         messages = queue_object.receive_messages(WaitTimeSeconds=wait_time,
-                                                MaxNumberOfMessages= max_messages)
+                                                MaxNumberOfMessages=max_messages)
     except ClientError as e:
         print("Failure to retrieve messages from queue. ", e.response['Error']['Message'])
         return
@@ -97,7 +96,7 @@ def process_queue(queue_object):
                         print("Unable to update job status to 'FAILED' in the database.", e.response['Error']['Message'])
                         return
                     # If job status updated to "FAILED" is successful, delete message from queue
-                    try:
+                    try: 
                         message.delete()
                         print("Input file does not exist, message deleted from queue")
                         return
