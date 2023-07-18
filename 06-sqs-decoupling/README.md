@@ -8,6 +8,8 @@ Here, I add components that further the GAS application services and allow them 
 
 With these changes, the application now looks like this:
 
+![GAS application](https://github.com/magabrielaa/aws-cloud-computing/blob/main/06-sqs-decoupling/application.jpg)
+
 
 ### Note: Error Handling
 
