@@ -9,6 +9,7 @@ The code in this directory implements the following steps in the GAS application
 
 The updated application looks like this:
 
+![GAS application](https://github.com/magabrielaa/aws-cloud-computing/blob/main/04-application-decoupling/application.jpg)
 
 ### Note:
 
