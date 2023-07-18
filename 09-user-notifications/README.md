@@ -4,7 +4,7 @@ It is key to have a way to notify a user when the job is complete. I do this by 
 
 See an example of how a received email notification looks like:
 
-![Notification example]()
+![Notification example](https://github.com/magabrielaa/aws-cloud-computing/blob/main/09-user-notifications/notification.jpg)
 
 
 ## About the GAS application
