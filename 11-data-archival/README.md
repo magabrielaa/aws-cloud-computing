@@ -2,7 +2,9 @@
 
 Free users can only download their results file for up to 5 minutes after completion of their annotation job. Yes, this is ridiculously restrictive, but I use such a  short interval to test the application more easily.
 
-After 5 minutes elapse, a free user’s results file (not the log file) will be archived to a Glacier vault. This allows us to retain user data at relatively low cost, and to restore it in the event that the user decides to upgrade to a Premium user
+After 5 minutes elapse, a free user’s results file (not the log file) will be archived to a Glacier vault. This allows us to retain user data at relatively low cost, and to restore it in the event that the user decides to upgrade to a Premium user. Once the results file is archived, the job details page replaces the "download" link in the results file with the message “upgrade to Premium for download” and a link to upgrade to Premium:
+
+![Update Message](https://github.com/magabrielaa/aws-cloud-computing/blob/main/11-data-archival/upgrade_message.jpg)
 
 For the data archival, my approach consists of the following steps:
 
