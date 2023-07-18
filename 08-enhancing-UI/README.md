@@ -4,11 +4,11 @@ In this repository, I add three pages to improve the UX so users can check the s
 
 1. I add a route handler that displays a list of all the jobs submitted by a user. See the template `annotations.html`. The code ensures that it only returns jobs for the current authenticated user. The page looks like this:
 
-![Annotations list]()
+![Annotations list](https://github.com/magabrielaa/aws-cloud-computing/blob/main/08-enhancing-UI/annotations-list.jpg)
 
 2. I also add a route handler that displays the details of a requested job, the HTML file is `annotation.html`. For security reasons, I check that the requested job ID belongs to the user that is currently authenticated. If it does not, I return a 403 status and display a message using the 403 error route handler in `views.py`. 
 
-![Annotation details]()
+![Annotation details](https://github.com/magabrielaa/aws-cloud-computing/blob/main/08-enhancing-UI/annotation-details.jpg)
 
 3. I provide links for users to download the results file and view the log file for a job. When the user clicks a filename hyperlink in the job detail listing:
 
