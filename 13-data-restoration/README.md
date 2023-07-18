@@ -5,7 +5,7 @@ When a Free user converts to a Premium user, I move all of that user’s results
 ## Approach
 For the data restoration, my approach consists of the following steps:
 
-![Data Restoration Flow]()
+![Data Restoration Flow](https://github.com/magabrielaa/aws-cloud-computing/blob/main/13-data-restoration/restoration_flow.jpg)
 
 ###  /subscribe endpoint in `views.py`
 When a free user updates to premium, I post a message to a new SNS Premium Topic. This message contains the **user_id**.
