@@ -11,4 +11,4 @@ Directory contents are as follows:
 
 The complete application has the following workflow:
 
-![Final GAS application]()
+![Final GAS application](https://github.com/magabrielaa/aws-cloud-computing/blob/main/final-application.png)
