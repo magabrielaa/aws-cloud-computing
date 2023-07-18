@@ -1,4 +1,4 @@
-# Enhancing the Annotator
+# Enhancing the Annotator with a Webhook
 
 Requiring the annotator to continuously poll the job requests queue, as done up to `09-user-notifications` is not good (scalable) application design. A better way is to use a **webhook**: an HTTP endpoint that is called by the producer when an event of interest to the consumer occurs (in this case, when a new job is available). SNS allows us to send a notification to an HTTP endpoint (in addition to SQS queues and other subscribers). 
 
