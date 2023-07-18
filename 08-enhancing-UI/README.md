@@ -14,3 +14,14 @@ In this repository, I add three pages to improve the UX so users can check the s
 
 - If the user clicks on the results file name link, it downloads the file from S3 to the user’s laptop (I use a pre-signed download URL for this purpose)
 - If the user clicks on the log file link, it displays the log file in the browser (I read the S3 object into a string and return that in a simple template in `view_log.html` using a <pre> tag so that it is readable)
+
+
+## About the GAS application
+
+An enhanced web framework (based on [Flask](https://flask.palletsprojects.com/)) for use in the capstone project. Adds robust user authentication (via [Globus Auth](https://docs.globus.org/api/auth)), modular templates, and some simple styling based on [Bootstrap](https://getbootstrap.com/docs/3.3/).
+
+Directory contents are as follows:
+* `/web` - The GAS web app files
+* `/ann` - Annotator files
+* `/util` - Utility scripts/apps for notifications, archival, and restoration
+* `/aws` - AWS user data files
