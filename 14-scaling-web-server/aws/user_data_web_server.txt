@@ -1,0 +1,17 @@
+#!/bin/bash -ex
+
+# (1) Download GAS source code ZIP file from S3
+# https://stackoverflow.com/questions/45711312/download-s3-bucket-files-on-users-local-using-aws-cli
+aws s3 cp s3://mpcs-students/mariagabrielaa/gas.zip /home/ubuntu/gas.zip
+
+# (2) Unzip source code ZIP file
+# https://www.cyberciti.biz/faq/how-to-unzip-a-zip-file-using-the-linux-and-unix-bash-shell-terminal/
+unzip /home/ubuntu/gas.zip -d /home/ubuntu/
+
+# (3) Change file ownership to ubuntu:ubuntu for the app files
+chown -R ubuntu:ubuntu /home/ubuntu/gas/
+
+# (4) Run the web server app
+sudo -u ubuntu /home/ubuntu/gas/web/run_gas.sh &
+
+### EOUserData
